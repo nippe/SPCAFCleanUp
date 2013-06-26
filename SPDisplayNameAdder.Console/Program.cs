@@ -12,6 +12,7 @@ namespace SPDisplayNameAdder
   {
 
     static bool yesToAll = false;
+    private static ILog logger;
 
 
     static void Main(string[] args)
@@ -21,6 +22,8 @@ namespace SPDisplayNameAdder
         Console.WriteLine("Ange path till lösningens root foldeer");
         return;
       }
+
+      logger = new ConsoleLog(new FileLog());
 
       string rootPath = args[0];
       DirectoryInfo rootFolder = new DirectoryInfo(rootPath);
@@ -37,20 +40,26 @@ namespace SPDisplayNameAdder
       AskAndUnlockFileIfReadOnlyFlag(fileName);
       bool change = false;
 
+      logger.Log("Loading " + fileName);
       XDocument doc = XDocument.Load(fileName);
-      IEnumerable<XElement> fieldRefs = doc.Descendants("FieldRef");
+      XNamespace ns = "http://schemas.microsoft.com/sharepoint/";
+      IEnumerable<XElement> fieldRefs = doc.Descendants(ns + "FieldRef");
       
       foreach (XElement fieldRef in fieldRefs) {
         if(fieldRef.Attribute("DisplayName") == null) {
+          logger.Log("Adding DiplayName for " + fieldRef.Attribute("Name").Value);
           fieldRef.Add(new XAttribute("DisplayName", fieldRef.Attribute("Name").Value));
           change = true;
         }
       }
 
       if (change) {
+        logger.Log("Saving file");
         doc.Save(fileName, SaveOptions.None);
       }
     }
+
+
 
     private static void AskAndUnlockFileIfReadOnlyFlag(string fileName) {
       if (File.GetAttributes(fileName).HasFlag(FileAttributes.ReadOnly)) {
