@@ -13,6 +13,7 @@ namespace SPDisplayNameAdder
 
     static bool yesToAll = false;
     private static ILog logger;
+    private static List<string> files = new List<string>();
 
 
     static void Main(string[] args)
@@ -28,10 +29,11 @@ namespace SPDisplayNameAdder
       string rootPath = args[0];
       DirectoryInfo rootFolder = new DirectoryInfo(rootPath);
       TraverseFoler(rootFolder);
+      Console.WriteLine("\n\n{0} files changed", files.Count.ToString());
     }
 
     private static void TraverseFoler(DirectoryInfo currentFolder) {
-      foreach (FileInfo fileInfo in currentFolder.GetFiles("*.xml",SearchOption.AllDirectories)) {
+      foreach (FileInfo fileInfo in currentFolder.GetFiles("Elements.xml",SearchOption.AllDirectories)) {
         AddDisplayNameToElements(fileInfo.FullName);
       }
     }
@@ -51,9 +53,18 @@ namespace SPDisplayNameAdder
           fieldRef.Add(new XAttribute("DisplayName", fieldRef.Attribute("Name").Value));
           change = true;
         }
+
+        if(fieldRef.Attribute("ID") != null && !fieldRef.Attribute("ID").Value.StartsWith("{")) {
+          logger.Log("Added cuerly braces for " + fieldRef.Attribute("ID").Value);
+          fieldRef.Attribute("ID").Value = String.Format("{{{0}}}", fieldRef.Attribute("ID").Value);
+          change = true;
+        }
       }
 
       if (change) {
+        if(!files.Contains(fileName)) {
+          files.Add(fileName);
+        }
         logger.Log("Saving file");
         doc.Save(fileName, SaveOptions.None);
       }
